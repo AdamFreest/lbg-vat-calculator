@@ -1,33 +1,50 @@
 // This adds install and test stages before static code analysis
-pipeline {
-  agent any
-
-  stages {
-   
-    stage('Install') {
-        steps {
-            // Install the ReactJS dependencies
-            sh "npm install"
-        }
-    }
-    stage('Test') {
-        steps {
-          // Run the ReactJS tests
-          sh "npm test"
-        }
-    }
-    stage('SonarQube Analysis') {
-      environment {
-        scannerHome = tool 'sonarqube'
-        }
-        steps {
-            withSonarQubeEnv('sonar-qube-1') {        
-              sh "${scannerHome}/bin/sonar-scanner"
-        }
-        timeout(time: 10, unit: 'MINUTES'){
-          waitForQualityGate abortPipeline: true
-          }
-        }
-    }
+pipeline
+{
+ environment 
+ {
+ registry = "adamfreest/vatcal"
+        registryCredentials = "dockerhub_id"
+        dockerImage = ""
   }
+    agent any
+        stages 
+        {
+            stage ('Build Docker Image')
+            {
+                steps
+                {
+                    script 
+                    {
+                        dockerImage = docker.build(registry)
+                    }
+                }
+            }
+            //TODO: Add comment
+            stage ("Push to Docker Hub")
+            {
+                steps 
+                {
+                    script 
+                    {
+                        docker.withRegistry('', registryCredentials) 
+                        {
+                            dockerImage.push("${env.BUILD_NUMBER}")
+                            dockerImage.push("latest")
+                        }
+                    }
+                }
+            }
+            //clean and force the clean for thise >48 hours old
+            stage ("Clean up")
+            {
+                steps 
+                {
+                    script 
+                    {
+                        sh 'docker image prune --all --force --filter "until=48h"'
+                    }
+                }
+            }
+        }
 }
