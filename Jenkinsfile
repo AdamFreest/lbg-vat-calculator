@@ -20,7 +20,7 @@ pipeline
                     }
                 }
             }
-            //TODO: Add comment
+            //TODO: Add comments
             stage ("Push to Docker Hub")
             {
                 steps 
